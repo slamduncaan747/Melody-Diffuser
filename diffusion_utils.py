@@ -1,0 +1,24 @@
+from torch import nn
+import torch
+import torch.nn.functional as F
+
+def get_betas(beta0, betaT, T):
+    return torch.linspace(beta0, betaT, T)
+
+def add_noise(x0, beta_cum, vocab_size):
+    rand = torch.randint(0, vocab_size, x0.shape, device=x0.device)
+    mask = torch.rand(x0.shape, device=x0.device) < beta_cum.view(-1, 1)
+    return torch.where(mask, rand, x0)
+
+def get_loss(model, x0, cond, betas, vocab_size):
+    B, _ = x0.shape
+    T = len(betas)
+    t = torch.randint(1, T+1, (B,), device=x0.device)
+    beta_cum = 1-torch.cumprod(1-betas, dim=0)[t-1]
+
+    xt = add_noise(x0, beta_cum, vocab_size)
+    logits = model(xt, t, cond)
+    return F.cross_entropy(logits.transpose(1,2), x0)
+
+
+
