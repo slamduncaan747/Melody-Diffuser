@@ -9,6 +9,7 @@ class Config:
     vocab_size: int
     T: int
     dim: int
+    epochs: int
 
 def time_encoder(t, dim):
     half_dim = dim // 2
