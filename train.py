@@ -7,7 +7,7 @@ config = Config(
     vocab_size=90,
     T=16,
     dim=512,
-    epochs=100
+    epochs=1000
 )
 
 
@@ -15,7 +15,7 @@ device = torch.device("cuda" if torch.cuda.is_available() else "mps" if torch.ba
 
 with open("melodies_test.pkl", "rb") as f:
     data = pickle.load(f)
-data_tensor = torch.tensor(data[:128], dtype=torch.long).squeeze(1).to(device)
+data_tensor = torch.tensor(data[:1000], dtype=torch.long).squeeze(1).to(device)
 
 dataset = torch.utils.data.TensorDataset(data_tensor)
 dataloader = torch.utils.data.DataLoader(dataset, batch_size=16, shuffle=True)
@@ -24,16 +24,20 @@ dataloader = torch.utils.data.DataLoader(dataset, batch_size=16, shuffle=True)
 
 model = MelodyDiffusor(vocab_size=90, seq_len=1024, dim=512, n_layers=6, n_heads=8, ffn_inner_dim=2048, dropout=0.1).to(device)
 optimizer = torch.optim.AdamW(model.parameters(), lr=1e-4)
-betas = get_betas(.02, .25, 16).to(device)
+betas = get_betas(.02, .1, 16).to(device)
+alphas = 1 - betas
+alpha_cum = torch.cumprod(alphas, dim=0)
+
 print("Starting training...")
 for epoch in range(config.epochs):
     total_loss = 0
     for batch in dataloader:
         x0 = batch[0].to(device)
         t = torch.randint(0, 16, (x0.shape[0],)).long().to(device)
-        noisy_inputs = add_noise(x0, betas[t], config.vocab_size)
+        noise = 1-alpha_cum[t]
+        noisy_inputs = add_noise(x0, noise, config.vocab_size)
         optimizer.zero_grad()
-        loss = get_loss(model, noisy_inputs, betas, config.vocab_size)
+        loss = get_loss(model, noisy_inputs, x0, betas, config.vocab_size, t)
         loss.backward()
         optimizer.step()
         total_loss += loss.item()
