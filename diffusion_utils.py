@@ -1,6 +1,26 @@
 from torch import nn
 import torch
 import torch.nn.functional as F
+from dataclasses import dataclass
+import math
+
+@dataclass
+class Config:
+    vocab_size: int
+    T: int
+    dim: int
+
+def time_encoder(t, dim):
+    half_dim = dim // 2
+    period = 10000
+
+    freqs = torch.exp(-math.log(period) * torch.arange(0, half_dim, device=t.device).float() / half_dim)
+
+    args = t.float().unsqueeze(1) * freqs.unsqueeze(0)
+
+    embedding = torch.cat([torch.cos(args), torch.sin(args)], dim=-1)
+
+    return embedding
 
 def get_betas(beta0, betaT, T):
     return torch.linspace(beta0, betaT, T)
