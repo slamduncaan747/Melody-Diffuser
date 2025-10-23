@@ -10,6 +10,9 @@ class Config:
     T: int
     dim: int
     epochs: int
+    val_interval: int
+    checkpoint_interval: int
+    
 
 def time_encoder(t, dim):
     half_dim = dim // 2

@@ -15,7 +15,7 @@ config = Config(
 
 device = torch.device("cuda" if torch.cuda.is_available() else "mps" if torch.backends.mps.is_available() else "cpu")
 
-with open("/content/drive/MyDrive/MelodyDiffusor/melodies_test.pkl", "rb") as f:
+with open("Melody-Diffuser/melodies_test.pkl", "rb") as f:
     data = pickle.load(f)
 data_tensor = torch.tensor(data[:len(data)-1025], dtype=torch.long).squeeze(1).to(device)
 val_tensor = torch.tensor(data[len(data)-1025:], dtype=torch.long).squeeze(1).to(device)
