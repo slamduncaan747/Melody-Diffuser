@@ -50,8 +50,8 @@ def get_loss(model, noisy_input, x0, betas, vocab_size, t, cond=None):
 
     predictions = logits.argmax(-1)
 
-    holds = (predictions == 128) or (predictions == 129)
-    has_notes = (x0 != 128) or (x0 != 129)
+    holds = (predictions == 128) | (predictions == 129)
+    has_notes = (x0 != 128) | (x0 != 129)
 
     punishment_spots = holds and has_notes
 
