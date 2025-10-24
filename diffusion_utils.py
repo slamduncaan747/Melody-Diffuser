@@ -35,6 +35,11 @@ def add_noise(x0, beta_cum, vocab_size):
     mask = torch.rand(x0.shape, device=x0.device) < beta_cum.view(-1, 1)
     return torch.where(mask, rand, x0)
 
+def add_cond_noise(cond, cond_vocab=8, prob=0.1):
+    mask = torch.rand_like(cond.float()) < prob
+    random_gestures = torch.randint(0, cond_vocab, cond.shape, device=cond.device)
+    return torch.where(mask, random_gestures, cond)
+
 def get_loss(model, noisy_input, x0, betas, vocab_size, t, cond=None):
     if random.random() < .15:
         logits = model(noisy_input, t, None)

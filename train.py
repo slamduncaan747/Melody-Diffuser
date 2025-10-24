@@ -1,23 +1,23 @@
 import torch
 from model import MelodyDiffusor
 import pickle
-from diffusion_utils import add_noise, get_loss, get_betas, Config
+from diffusion_utils import add_noise, get_loss, get_betas, Config, add_cond_noise
 import torch.multiprocessing as mp
 import numpy as np
 config = Config(
     vocab_size=130,
     T=16,
     dim=512,
-    epochs=5000,
-    val_interval=10,
-    checkpoint_interval=50
+    epochs=100,
+    val_interval=3,
+    checkpoint_interval=10
 )
 onColab = True
 test_amount = 16
-batch_size = 256
+batch_size = 2048
 workers = 12
-data_string = "melodies_test.pkl" if not onColab else "Melody-Diffuser/melodies_test.pk"
-cond_string = "gesture_conditions.npy" if not onColab else "Melody-Diffusor/gesture_conditions.npy"
+data_string = "melodies_test.pkl" if not onColab else "Melody-Diffuser/melodies_test.pkl"
+cond_string = "gesture_conditions.npy" if not onColab else "Melody-Diffuser/gesture_conditions.pkl"
 
 if __name__ == "__main__":
     try:
@@ -49,7 +49,7 @@ if __name__ == "__main__":
 
 
 
-    model = MelodyDiffusor(vocab_size=130, seq_len=64, dim=512, n_layers=6, n_heads=8, ffn_inner_dim=2048, dropout=0.1).to(device)
+    model = MelodyDiffusor(vocab_size=130, seq_len=64, dim=512, n_layers=6, n_heads=8, ffn_inner_dim=2048, dropout=0.25).to(device)
     optimizer = torch.optim.AdamW(model.parameters(), lr=1e-5)
     betas = get_betas(.02, .25, 16).to(device)
     alphas = 1 - betas
@@ -62,6 +62,7 @@ if __name__ == "__main__":
         for batch, cond in dataloader:
             x0 = batch.to(device)
             condition = cond.to(device)
+            condition = add_cond_noise(condition, 8, .1)
             t = torch.randint(0, 16, (x0.shape[0],)).long().to(device)
             noise = 1-alpha_cum[t]
             noisy_inputs = add_noise(x0, noise, config.vocab_size)
@@ -85,6 +86,7 @@ if __name__ == "__main__":
                 for val_batch, val_cond in val_loader:
                     val_batch = val_batch.to(device)
                     val_cond = val_cond.to(device)
+                    val_cond = add_cond_noise(val_cond, 8, .1)
                     t = torch.randint(0, 16, (val_batch.shape[0],)).long().to(device)
                     noise = 1 - alpha_cum[t]
                     noisy_inputs = add_noise(val_batch, noise, config.vocab_size)

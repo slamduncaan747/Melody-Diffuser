@@ -23,7 +23,7 @@ class SwiGLU(nn.Module):
         return self.w2(F.silu(a) * b)
 
 class TransformerBlock(nn.Module):
-    def __init__(self, dim, n_heads, ffn_inner_dim, dropout=.1):
+    def __init__(self, dim, n_heads, ffn_inner_dim, dropout=.25):
         super().__init__()
         self.norm1 = RMSNorm(dim)
         self.attn = nn.MultiheadAttention(dim, n_heads, dropout = dropout, batch_first=True)
@@ -55,7 +55,7 @@ class TransformerBlock(nn.Module):
     
 
 class MelodyDiffusor(nn.Module):
-    def __init__(self, vocab_size, seq_len, dim, n_layers, n_heads, ffn_inner_dim, dropout=.1):
+    def __init__(self, vocab_size, seq_len, dim, n_layers, n_heads, ffn_inner_dim, dropout=.25):
         super().__init__()
         self.token_embeddings = nn.Embedding(vocab_size, dim)
         self.pos_embeddings = nn.Embedding(seq_len, dim)
