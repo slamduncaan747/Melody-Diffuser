@@ -53,7 +53,7 @@ def get_loss(model, noisy_input, x0, betas, vocab_size, t, cond=None):
     holds = (predictions == 128) | (predictions == 129)
     has_notes = (x0 != 128) | (x0 != 129)
 
-    punishment_spots = holds and has_notes
+    punishment_spots = holds & has_notes
 
     weighted_loss = torch.where(punishment_spots, 3.0, 1.0)
     
