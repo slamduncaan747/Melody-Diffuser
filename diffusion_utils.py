@@ -3,6 +3,7 @@ import torch
 import torch.nn.functional as F
 from dataclasses import dataclass
 import math
+import random
 
 @dataclass
 class Config:
@@ -35,7 +36,10 @@ def add_noise(x0, beta_cum, vocab_size):
     return torch.where(mask, rand, x0)
 
 def get_loss(model, noisy_input, x0, betas, vocab_size, t, cond=None):
-    logits = model(noisy_input, t, cond)
+    if random.random() < .15:
+        logits = model(noisy_input, t, None)
+    else:
+        logits = model(noisy_input, t, cond)
     return F.cross_entropy(logits.transpose(1,2), x0)
 
 

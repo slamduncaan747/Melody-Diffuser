@@ -1,7 +1,7 @@
 from torch import nn
 import torch
 import torch.nn.functional as F
-from diffusion_utils import get_betas, add_noise, get_loss, time_encoder, Config
+import math
 
 class RMSNorm(nn.Module):
     def __init__(self, dim):
@@ -29,17 +29,28 @@ class TransformerBlock(nn.Module):
         self.attn = nn.MultiheadAttention(dim, n_heads, dropout = dropout, batch_first=True)
         self.drop1 = nn.Dropout(dropout)
 
+
+
         self.norm2 = RMSNorm(dim)
-        self.ffn = SwiGLU(dim, ffn_inner_dim)
+        self.cross_attn = nn.MultiheadAttention(dim, n_heads, batch_first=True)
         self.drop2 = nn.Dropout(dropout)
-    def forward(self, x):
+
+        self.norm3 = RMSNorm(dim)
+        self.ffn = SwiGLU(dim, ffn_inner_dim)
+        self.drop3 = nn.Dropout(dropout)
+    def forward(self, x, cond=None):
         hidden = self.norm1(x)
         attn_out, _ = self.attn(hidden, hidden, hidden, need_weights=False)
         x = x + self.drop1(attn_out)
 
-        hidden = self.norm2(x)
+        if not cond == None:
+            hidden = self.norm2(x)
+            cattn, _ = self.cross_attn(hidden, cond, cond, need_weights=False) 
+            x = x + self.drop2(cattn)
+
+        hidden = self.norm3(x)
         swiglu_out = self.ffn(hidden)
-        x = x + self.drop2(swiglu_out)
+        x = x + self.drop3(swiglu_out)
         return x
     
 
@@ -48,6 +59,12 @@ class MelodyDiffusor(nn.Module):
         super().__init__()
         self.token_embeddings = nn.Embedding(vocab_size, dim)
         self.pos_embeddings = nn.Embedding(seq_len, dim)
+        self.cond_embeddings = nn.Embedding(8, dim)
+        
+        half_dim = dim // 2
+        period = 10000
+        freqs = torch.exp(-math.log(period) * torch.arange(0, half_dim).float() / half_dim)
+        self.register_buffer('freqs', freqs)
 
         self.t_proj = nn.Sequential(
             nn.Linear(dim, dim),
@@ -63,18 +80,29 @@ class MelodyDiffusor(nn.Module):
         self.head = nn.Linear(dim, vocab_size, bias=False)
         self.head.weight = self.token_embeddings.weight
 
+    def time_encoder(self, t):
+        args = t.float().unsqueeze(1) * self.freqs.unsqueeze(0)
+        embedding = torch.cat([torch.cos(args), torch.sin(args)], dim=-1)
+        return embedding
+
     def forward(self, x, t, cond=None):
         B, L = x.shape
         token_emb = self.token_embeddings(x)
         pos_ids = torch.arange(L, device=x.device).unsqueeze(0).expand(B, L)
         pos_emb = self.pos_embeddings(pos_ids)
 
-        t_emb = time_encoder(t, token_emb.size(-1))
+        t_emb = self.time_encoder(t)
         t_emb = self.t_proj(t_emb).unsqueeze(1)
         h = token_emb + pos_emb + t_emb
 
+        c_emb = None
+        if cond is not None:
+            c_emb = self.cond_embeddings(cond)
+            
+
         for block in self.blocks:
-            h = block(h)
+            h = block(h, c_emb)
+
         h = self.norm(h)
         logits = self.head(h)
         return logits
