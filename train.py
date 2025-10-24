@@ -30,7 +30,7 @@ if __name__ == "__main__":
     with open(data_string, "rb") as f:
         data = pickle.load(f)
     with open(cond_string, "rb") as c:
-        conds = np.load(c)
+        conds = pickle.load(c)
     if onColab:
         conds_tensor_t = torch.tensor(conds[:len(data)-1025], dtype=torch.long).squeeze(1)
         conds_tensor_v = torch.tensor(conds[len(data)-1025:], dtype=torch.long).squeeze(1)
@@ -51,7 +51,7 @@ if __name__ == "__main__":
 
     model = MelodyDiffusor(vocab_size=130, seq_len=64, dim=512, n_layers=6, n_heads=8, ffn_inner_dim=2048, dropout=0.25).to(device)
     optimizer = torch.optim.AdamW(model.parameters(), lr=1e-5)
-    betas = get_betas(.02, .25, 16).to(device)
+    betas = get_betas(.05, .5, 16).to(device)
     alphas = 1 - betas
     alpha_cum = torch.cumprod(alphas, dim=0)
 
@@ -62,7 +62,7 @@ if __name__ == "__main__":
         for batch, cond in dataloader:
             x0 = batch.to(device)
             condition = cond.to(device)
-            condition = add_cond_noise(condition, 8, .1)
+            condition = add_cond_noise(condition, 8, .25)
             t = torch.randint(0, 16, (x0.shape[0],)).long().to(device)
             noise = 1-alpha_cum[t]
             noisy_inputs = add_noise(x0, noise, config.vocab_size)
@@ -73,7 +73,7 @@ if __name__ == "__main__":
             torch.nn.utils.clip_grad_norm_(model.parameters(), max_norm=1.0)
             optimizer.step()
             total_loss += loss.item()
-        avg_loss = total_loss / (len(dataloader)*batch_size)
+        avg_loss = total_loss / len(dataloader)
         print(f"Epoch {epoch+1}/{config.epochs}, Loss: {avg_loss:.4f}")
 
         if (epoch + 1) % config.checkpoint_interval == 0:
@@ -92,6 +92,6 @@ if __name__ == "__main__":
                     noisy_inputs = add_noise(val_batch, noise, config.vocab_size)
                     val_loss = get_loss(model, noisy_inputs, val_batch, betas, config.vocab_size, t, val_cond)
                     val_loss_total += val_loss.item()
-                val_loss = val_loss_total / (len(val_loader)*batch_size)
+                val_loss = val_loss_total / len(val_loader)
                 print(f"Validation Loss at epoch {epoch+1}: {val_loss_total:.4f}")
             model.train()

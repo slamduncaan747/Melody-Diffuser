@@ -45,7 +45,19 @@ def get_loss(model, noisy_input, x0, betas, vocab_size, t, cond=None):
         logits = model(noisy_input, t, None)
     else:
         logits = model(noisy_input, t, cond)
-    return F.cross_entropy(logits.transpose(1,2), x0)
+    
+    normal_loss = F.cross_entropy(logits.transpose(1,2), x0)
+
+    predictions = logits.argmax(-1)
+
+    holds = (predictions == 128) or (predictions == 129)
+    has_notes = (x0 != 128) or (x0 != 129)
+
+    punishment_spots = holds and has_notes
+
+    weighted_loss = torch.where(punishment_spots, 3.0, 1.0)
+    
+    return weighted_loss.mean()
 
 
 
