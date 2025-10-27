@@ -16,9 +16,9 @@ config = Config(
 )
 onColab = True
 test_amount = 16
-batch_size = 512
+batch_size = 256
 workers = 12
-data_string = "melodies_test.pkl" if not onColab else "Melody-Diffuser/melodies_test.pkl"
+data_string = "melodies_test.pkl" if not onColab else "Melody-Diffuser/testandval_data.pkl"
 cond_string = "gesture_conditions.npy" if not onColab else "Melody-Diffuser/gesture_conditions.pkl"
 
 run_timestamp = datetime.now().strftime("%Y-%m-%d_%H-%M-%S")
