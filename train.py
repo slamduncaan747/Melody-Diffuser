@@ -5,7 +5,7 @@ from diffusion_utils import add_noise, get_loss, get_betas, Config, add_cond_noi
 import torch.multiprocessing as mp
 import numpy as np
 import os
-import datetime
+from datetime import datetime
 config = Config(
     vocab_size=130,
     T=64,
@@ -16,7 +16,7 @@ config = Config(
 )
 onColab = True
 test_amount = 16
-batch_size = 2048
+batch_size = 512
 workers = 12
 data_string = "melodies_test.pkl" if not onColab else "Melody-Diffuser/melodies_test.pkl"
 cond_string = "gesture_conditions.npy" if not onColab else "Melody-Diffuser/gesture_conditions.pkl"
@@ -38,10 +38,10 @@ if __name__ == "__main__":
     with open(cond_string, "rb") as c:
         conds = pickle.load(c)
     if onColab:
-        conds_tensor_t = torch.tensor(conds[:len(data)-1025], dtype=torch.long).squeeze(1)
-        conds_tensor_v = torch.tensor(conds[len(data)-1025:], dtype=torch.long).squeeze(1)
-        data_tensor = torch.tensor(data[:len(data)-1025], dtype=torch.long).squeeze(1)
-        val_tensor = torch.tensor(data[len(data)-1025:], dtype=torch.long).squeeze(1)
+        conds_tensor_t = torch.tensor(conds[:len(data)-5000], dtype=torch.long).squeeze(1)
+        conds_tensor_v = torch.tensor(conds[len(data)-5000:], dtype=torch.long).squeeze(1)
+        data_tensor = torch.tensor(data[:len(data)-5000], dtype=torch.long).squeeze(1)
+        val_tensor = torch.tensor(data[len(data)-5000:], dtype=torch.long).squeeze(1)
     else:
         conds_tensor_t = torch.tensor(conds[:test_amount], dtype=torch.long).squeeze(1)
         conds_tensor_v = torch.tensor(conds[-test_amount:], dtype=torch.long).squeeze(1)
