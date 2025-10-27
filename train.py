@@ -6,7 +6,7 @@ import torch.multiprocessing as mp
 import numpy as np
 config = Config(
     vocab_size=130,
-    T=16,
+    T=64,
     dim=512,
     epochs=100,
     val_interval=3,
@@ -49,9 +49,9 @@ if __name__ == "__main__":
 
 
 
-    model = MelodyDiffusor(vocab_size=130, seq_len=64, dim=512, n_layers=6, n_heads=8, ffn_inner_dim=2048, dropout=0.25).to(device)
-    optimizer = torch.optim.AdamW(model.parameters(), lr=1e-5)
-    betas = get_betas(.05, .5, 16).to(device)
+    model = MelodyDiffusor(vocab_size=130, seq_len=64, dim=512, n_layers=6, n_heads=8, ffn_inner_dim=2048, dropout=0.1).to(device)
+    optimizer = torch.optim.AdamW(model.parameters(), lr=2e-4)
+    betas = get_betas(.05, .5, config.T).to(device)
     alphas = 1 - betas
     alpha_cum = torch.cumprod(alphas, dim=0)
 
@@ -63,7 +63,7 @@ if __name__ == "__main__":
             x0 = batch.to(device)
             condition = cond.to(device)
             condition = add_cond_noise(condition, 8, .25)
-            t = torch.randint(0, 16, (x0.shape[0],)).long().to(device)
+            t = torch.randint(0, config.T, (x0.shape[0],)).long().to(device)
             noise = 1-alpha_cum[t]
             noisy_inputs = add_noise(x0, noise, config.vocab_size)
             optimizer.zero_grad()
@@ -87,7 +87,7 @@ if __name__ == "__main__":
                     val_batch = val_batch.to(device)
                     val_cond = val_cond.to(device)
                     val_cond = add_cond_noise(val_cond, 8, .1)
-                    t = torch.randint(0, 16, (val_batch.shape[0],)).long().to(device)
+                    t = torch.randint(0, config.T, (val_batch.shape[0],)).long().to(device)
                     noise = 1 - alpha_cum[t]
                     noisy_inputs = add_noise(val_batch, noise, config.vocab_size)
                     val_loss = get_loss(model, noisy_inputs, val_batch, betas, config.vocab_size, t, val_cond)

@@ -23,7 +23,7 @@ class SwiGLU(nn.Module):
         return self.w2(F.silu(a) * b)
 
 class TransformerBlock(nn.Module):
-    def __init__(self, dim, n_heads, ffn_inner_dim, dropout=.25):
+    def __init__(self, dim, n_heads, ffn_inner_dim, dropout=.1):
         super().__init__()
         self.norm1 = RMSNorm(dim)
         self.attn = nn.MultiheadAttention(dim, n_heads, dropout = dropout, batch_first=True)

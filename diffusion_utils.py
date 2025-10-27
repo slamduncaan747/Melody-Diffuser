@@ -55,9 +55,12 @@ def get_loss(model, noisy_input, x0, betas, vocab_size, t, cond=None):
 
     punishment_spots = holds & has_notes
 
+    penalty = torch.tensor(3, device=normal_loss.device, dtype=normal_loss.dtype)
+    normal_loss = normal_loss * torch.where(punishment_spots, penalty, torch.tensor(1.0, device=normal_loss.device, dtype=normal_loss.dtype))
+
     weighted_loss = torch.where(punishment_spots, 3.0, 1.0)
     
-    return weighted_loss.mean()
+    return (weighted_loss*normal_loss).mean()
 
 
 
