@@ -4,6 +4,8 @@ import pickle
 from diffusion_utils import add_noise, get_loss, get_betas, Config, add_cond_noise
 import torch.multiprocessing as mp
 import numpy as np
+import os
+import datetime
 config = Config(
     vocab_size=130,
     T=64,
@@ -18,6 +20,10 @@ batch_size = 2048
 workers = 12
 data_string = "melodies_test.pkl" if not onColab else "Melody-Diffuser/melodies_test.pkl"
 cond_string = "gesture_conditions.npy" if not onColab else "Melody-Diffuser/gesture_conditions.pkl"
+
+run_timestamp = datetime.now().strftime("%Y-%m-%d_%H-%M-%S")
+checkpoint_dir = f"/content/drive/MyDrive/MelodyDiffusor/checkpoints/{run_timestamp}"
+os.makedirs(checkpoint_dir, exist_ok=True)
 
 if __name__ == "__main__":
     try:
@@ -62,7 +68,7 @@ if __name__ == "__main__":
         for batch, cond in dataloader:
             x0 = batch.to(device)
             condition = cond.to(device)
-            condition = add_cond_noise(condition, 8, .25)
+            condition = add_cond_noise(condition, 8, .1)
             t = torch.randint(0, config.T, (x0.shape[0],)).long().to(device)
             noise = 1-alpha_cum[t]
             noisy_inputs = add_noise(x0, noise, config.vocab_size)
@@ -77,7 +83,8 @@ if __name__ == "__main__":
         print(f"Epoch {epoch+1}/{config.epochs}, Loss: {avg_loss:.4f}")
 
         if (epoch + 1) % config.checkpoint_interval == 0:
-            torch.save(model.state_dict(), f"/content/drive/MyDrive/BachNet/checkpoints/melody_diffusor_model_epoch{epoch+1}.pth")
+            save_path = os.path.join(checkpoint_dir, f"melody_diffusor_model_epoch{epoch+1}.pth")
+            torch.save(model.state_dict(), save_path)
         
         if (epoch + 1) % config.val_interval == 0:
             model.eval()
