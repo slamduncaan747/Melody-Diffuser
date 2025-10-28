@@ -8,7 +8,8 @@ import os
 from datetime import datetime
 from tqdm import tqdm
 from torch.optim.lr_scheduler import LambdaLR
-import math
+import wandb
+
 
 config = Config(
     vocab_size=130,
@@ -37,6 +38,23 @@ if __name__ == "__main__":
     run_timestamp = datetime.now().strftime("%Y-%m-%d_%H-%M-%S")
     checkpoint_dir = f"/content/drive/MyDrive/MelodyDiffusor/checkpoints/{run_timestamp}"
     os.makedirs(checkpoint_dir, exist_ok=True)
+
+    wandb.init(
+        project="melody-diffuser",  # Set your project name
+        name=run_timestamp,         # Name this run
+        config={
+            "learning_rate": 2e-4,
+            "epochs": config.epochs,
+            "batch_size": batch_size,
+            "dim": config.dim,
+            "n_layers": 6,
+            "n_heads": 8,
+            "dropout": 0.1,
+            "T_steps": config.T,
+            "val_size": val_size,
+            "dataset_size": "10M" # or len(data) after loading
+        }
+    )
 
     device = torch.device("cuda" if torch.cuda.is_available() else "mps" if torch.backends.mps.is_available() else "cpu")
 
@@ -75,7 +93,7 @@ if __name__ == "__main__":
 
     scheduler = LambdaLR(optimizer, lr_lambda=lambda step: get_scheduler(step, warmup_steps=warmup_steps, total_training_steps=total_training_steps))
 
-    betas = get_betas(.05, .5, config.T).to(device)
+    betas = get_betas(1e-4, .05, config.T).to(device)
     alphas = 1 - betas
     alpha_cum = torch.cumprod(alphas, dim=0)
 
@@ -104,6 +122,13 @@ if __name__ == "__main__":
             batch_loop.set_postfix(loss=loss.item())
             training_step += 1
 
+            if training_step % 100 == 0: 
+                wandb.log({
+                    "train_loss": loss.item(),
+                    "lr": scheduler.get_last_lr()[0],
+                    "step": training_step
+                })
+
             if training_step % config.val_interval == 0:
                 model.eval()
                 val_loss_total = 0
@@ -122,6 +147,11 @@ if __name__ == "__main__":
                     
                 val_loss = val_loss_total / len(val_loader)
                 print(f"\nStep {training_step}, Validation Loss: {val_loss:.4f}\n")
+
+                wandb.log({
+                    "val_loss": val_loss,
+                    "step": training_step
+                })
                 
                 save_path = os.path.join(checkpoint_dir, f"melody_diffusor_model_step{training_step}.pth")
                 torch.save(model.state_dict(), save_path)
@@ -130,6 +160,14 @@ if __name__ == "__main__":
 
         avg_loss = total_loss / len(dataloader)
         print(f"Epoch {epoch+1}/{config.epochs}, Loss: {avg_loss:.4f}")
+
+        wandb.log({
+            "avg_epoch_loss": avg_loss,
+            "epoch": epoch + 1
+        })
+
+    wandb.finish()
+
 
         
         
