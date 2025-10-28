@@ -60,7 +60,13 @@ def get_loss(model, noisy_input, x0, betas, vocab_size, t, cond=None):
     
     return (weighted_loss).mean()
 
+def get_scheduler(current_step, warmup_steps, total_training_steps):
 
+    if current_step < warmup_steps:
+        return float(current_step) / float(max(1, warmup_steps))
+
+    progress = float(current_step - warmup_steps) / float(max(1, total_training_steps - warmup_steps))
+    return 0.5 * (1.0 + math.cos(math.pi * progress))
 
 
 
