@@ -4,4 +4,4 @@ Melody-Diffuser is a discrete diffusion transformer for generating monophonic sy
 
 It also has a novel conditioning mechanism using hand gesture tracking. 
 
-I have attatched links to unconditioned samples.
+Model is available for download at https://huggingface.co/DuncanLarz/Melody-Diffuser
