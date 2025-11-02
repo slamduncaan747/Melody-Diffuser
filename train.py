@@ -25,7 +25,7 @@ batch_size = 2048
 workers = 12
 val_size = 100000
 data_string = "melodies_test.pkl" if not onColab else "Melody-Diffuser/testandval_data.pkl"
-cond_string = "gesture_conditions.npy" if not onColab else "Melody-Diffuser/gesture_conditions.pkl"
+cond_string = "gesture_conditions.npy" if not onColab else "Melody-Diffuser/big_gestures_V2.pkl"
 
 
 
@@ -86,7 +86,7 @@ if __name__ == "__main__":
     val_loader = torch.utils.data.DataLoader(val_set, batch_size=batch_size, shuffle=False, num_workers=workers, pin_memory=(device.type == "cuda"))
 
     model = MelodyDiffusor(vocab_size=130, seq_len=64, dim=512, n_layers=6, n_heads=8, ffn_inner_dim=2048, dropout=0.1).to(device)
-    optimizer = torch.optim.AdamW(model.parameters(), lr=2e-4)
+    optimizer = torch.optim.AdamW(model.parameters(), lr=2e-4, weight_decay=0.01)
 
     total_training_steps = len(dataloader) * config.epochs
     warmup_steps = len(dataloader) * 2
@@ -107,7 +107,6 @@ if __name__ == "__main__":
         for batch, cond in batch_loop:
             x0 = batch.to(device)
             condition = cond.to(device)
-            condition = add_cond_noise(condition, 8, .1)
             t = torch.randint(0, config.T, (x0.shape[0],)).long().to(device)
             noise = 1-alpha_cum[t]
             noisy_inputs = add_noise(x0, noise, config.vocab_size)
