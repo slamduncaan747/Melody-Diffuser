@@ -1,6 +1,6 @@
-# Melody-Diffuser
+# Melody Diffuser
 
-Melody-Diffuser is a discrete diffusion transformer designed to generate monophonic symbolic music. It is trained on a dataset of over 10,000,000 4-measure excerpts, quantized to the 16th note.
+Melody Diffuser is a discrete diffusion transformer designed to generate monophonic symbolic music. It is trained on a dataset of over 10,000,000 4-measure excerpts, quantized to the 16th note.
 
 It also features a novel conditioning mechanism that utilizes hand gesture tracking. 
 
