@@ -10,7 +10,6 @@ class RMSNorm(nn.Module):
         self.gamma = nn.Parameter(torch.ones(dim))
     def forward(self, x):
         rms = torch.sqrt(x.pow(2).mean(-1, keepdim=True)+self.eps)
-
         return (x/rms) * self.gamma
 
 class SwiGLU(nn.Module):
@@ -26,10 +25,8 @@ class TransformerBlock(nn.Module):
     def __init__(self, dim, n_heads, ffn_inner_dim, dropout=.1):
         super().__init__()
         self.norm1 = RMSNorm(dim)
-        self.attn = nn.MultiheadAttention(dim, n_heads, dropout = dropout, batch_first=True)
+        self.attn = nn.MultiheadAttention(dim, n_heads, dropout=dropout, batch_first=True)
         self.drop1 = nn.Dropout(dropout)
-
-
 
         self.norm2 = RMSNorm(dim)
         self.cross_attn = nn.MultiheadAttention(dim, n_heads, batch_first=True)
@@ -38,12 +35,13 @@ class TransformerBlock(nn.Module):
         self.norm3 = RMSNorm(dim)
         self.ffn = SwiGLU(dim, ffn_inner_dim)
         self.drop3 = nn.Dropout(dropout)
+
     def forward(self, x, cond=None):
         hidden = self.norm1(x)
         attn_out, _ = self.attn(hidden, hidden, hidden, need_weights=False)
         x = x + self.drop1(attn_out)
 
-        if not cond == None:
+        if cond is not None:
             hidden = self.norm2(x)
             cattn, _ = self.cross_attn(hidden, cond, cond, need_weights=False) 
             x = x + self.drop2(cattn)
@@ -57,9 +55,13 @@ class TransformerBlock(nn.Module):
 class MelodyDiffusor(nn.Module):
     def __init__(self, vocab_size, seq_len, dim, n_layers, n_heads, ffn_inner_dim, dropout=.25):
         super().__init__()
+        self.seq_len = seq_len
         self.token_embeddings = nn.Embedding(vocab_size, dim)
         self.pos_embeddings = nn.Embedding(seq_len, dim)
+        
         self.cond_embeddings = nn.Embedding(8, dim)
+
+        self.cond_pos_embeddings = nn.Embedding(seq_len, dim)
         
         half_dim = dim // 2
         period = 10000
@@ -98,7 +100,9 @@ class MelodyDiffusor(nn.Module):
         c_emb = None
         if cond is not None:
             c_emb = self.cond_embeddings(cond)
-            
+            cond_len = cond.shape[1]
+            cond_pos_ids = torch.arange(cond_len, device=cond.device).unsqueeze(0).expand(B, cond_len)
+            c_emb = c_emb + self.cond_pos_embeddings(cond_pos_ids)
 
         for block in self.blocks:
             h = block(h, c_emb)
@@ -106,5 +110,3 @@ class MelodyDiffusor(nn.Module):
         h = self.norm(h)
         logits = self.head(h)
         return logits
-    
-

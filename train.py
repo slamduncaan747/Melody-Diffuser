@@ -40,8 +40,8 @@ if __name__ == "__main__":
     os.makedirs(checkpoint_dir, exist_ok=True)
 
     wandb.init(
-        project="melody-diffuser",  # Set your project name
-        name=run_timestamp,         # Name this run
+        project="melody-diffuser",  
+        name=run_timestamp,         
         config={
             "learning_rate": 2e-4,
             "epochs": config.epochs,
@@ -52,7 +52,7 @@ if __name__ == "__main__":
             "dropout": 0.1,
             "T_steps": config.T,
             "val_size": val_size,
-            "dataset_size": "10M" # or len(data) after loading
+            "dataset_size": "10M" 
         }
     )
 
